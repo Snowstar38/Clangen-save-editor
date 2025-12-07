@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clangen Save Viewer</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #a8dadc;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        input[type="file"] { display: none; }
+        .file-label, select {
+            padding: 10px 16px;
+            border-radius: 6px;
+            border: 1px solid #457b9d;
+            background: #1d3557;
+            color: #eee;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .file-label:hover, select:hover {
+            background: #264b73;
+        }
+        select {
+            min-width: 200px;
+        }
+        select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .status {
+            color: #a8dadc;
+            font-size: 14px;
+        }
+        .cat-display {
+            background: #16213e;
+            border: 1px solid #457b9d;
+            border-radius: 8px;
+            padding: 20px;
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .placeholder {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Clangen Save Viewer</h1>
+    
+    <div class="controls">
+        <label class="file-label">
+            Load Save File
+            <input type="file" id="fileInput" accept=".json">
+        </label>
+        
+        <select id="catSelect" disabled>
+            <option value="">-- Select a cat --</option>
+        </select>
+        
+        <span class="status" id="status"></span>
+    </div>
+    
+    <div class="cat-display" id="catDisplay">
+        <span class="placeholder">Load a clan_cats.json file to view cat data.</span>
+    </div>
+
+    <script>
+        let catsData = [];
+        
+        const fileInput = document.getElementById('fileInput');
+        const catSelect = document.getElementById('catSelect');
+        const catDisplay = document.getElementById('catDisplay');
+        const status = document.getElementById('status');
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    catsData = JSON.parse(event.target.result);
+                    populateCatSelect();
+                    status.textContent = `Loaded ${catsData.length} cats`;
+                    catDisplay.innerHTML = '<span class="placeholder">Select a cat from the dropdown.</span>';
+                } catch (err) {
+                    status.textContent = 'Error parsing JSON file';
+                    catDisplay.innerHTML = `<span class="placeholder">Error: ${err.message}</span>`;
+                }
+            };
+            reader.readAsText(file);
+        });
+        
+        function populateCatSelect() {
+            catSelect.innerHTML = '<option value="">-- Select a cat --</option>';
+            catsData.forEach((cat, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                const name = cat.name_prefix + cat.name_suffix;
+                option.textContent = `${cat.ID} - ${name}`;
+                catSelect.appendChild(option);
+            });
+            catSelect.disabled = false;
+        }
+        
+        catSelect.addEventListener('change', (e) => {
+            const index = e.target.value;
+            if (index === '') {
+                catDisplay.innerHTML = '<span class="placeholder">Select a cat from the dropdown.</span>';
+                return;
+            }
+            const cat = catsData[index];
+            catDisplay.textContent = JSON.stringify(cat, null, 2);
+        });
+    </script>
+</body>
+</html>

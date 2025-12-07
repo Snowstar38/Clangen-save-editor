@@ -67,6 +67,38 @@
             color: #888;
             font-style: italic;
         }
+        #editorSection { display: none; }
+        #catEditor {
+            width: 100%;
+            min-height: 60vh;
+            background: #16213e;
+            border: 1px solid #457b9d;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #eee;
+            resize: vertical;
+        }
+        .editor-controls {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        #saveBtn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: 1px solid #2a9d8f;
+            background: #264653;
+            color: #eee;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        #saveBtn:hover { background: #2a9d8f; }
+        .error { color: #e76f51; font-size: 14px; }
+        .success { color: #2a9d8f; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -85,6 +117,14 @@
         <span class="status" id="status"></span>
     </div>
     
+    <div id="editorSection" style="display: none;">
+        <textarea id="catEditor"></textarea>
+        <div class="editor-controls">
+            <button id="saveBtn">Save File</button>
+            <span class="error" id="errorMsg"></span>
+        </div>
+    </div>
+    
     <div class="cat-display" id="catDisplay">
         <span class="placeholder">Load a clan_cats.json file to view cat data.</span>
     </div>
@@ -95,7 +135,13 @@
         const fileInput = document.getElementById('fileInput');
         const catSelect = document.getElementById('catSelect');
         const catDisplay = document.getElementById('catDisplay');
+        const editorSection = document.getElementById('editorSection');
+        const catEditor = document.getElementById('catEditor');
+        const saveBtn = document.getElementById('saveBtn');
+        const errorMsg = document.getElementById('errorMsg');
         const status = document.getElementById('status');
+        
+        let currentCatIndex = null;
         
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -131,11 +177,48 @@
         catSelect.addEventListener('change', (e) => {
             const index = e.target.value;
             if (index === '') {
+                editorSection.style.display = 'none';
+                catDisplay.style.display = 'block';
                 catDisplay.innerHTML = '<span class="placeholder">Select a cat from the dropdown.</span>';
+                currentCatIndex = null;
                 return;
             }
-            const cat = catsData[index];
-            catDisplay.textContent = JSON.stringify(cat, null, 2);
+            currentCatIndex = parseInt(index);
+            const cat = catsData[currentCatIndex];
+            catEditor.value = JSON.stringify(cat, null, 2);
+            errorMsg.textContent = '';
+            catDisplay.style.display = 'none';
+            editorSection.style.display = 'block';
+        });
+        
+        saveBtn.addEventListener('click', () => {
+            if (currentCatIndex === null) return;
+            
+            let editedCat;
+            try {
+                editedCat = JSON.parse(catEditor.value);
+            } catch (err) {
+                errorMsg.className = 'error';
+                errorMsg.textContent = `Invalid JSON: ${err.message}`;
+                return;
+            }
+            
+            catsData[currentCatIndex] = editedCat;
+            
+            const blob = new Blob([JSON.stringify(catsData, null, 4)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'clan_cats.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            errorMsg.className = 'success';
+            errorMsg.textContent = 'File saved!';
+            
+            // Update dropdown in case ID or name changed
+            const name = editedCat.name_prefix + editedCat.name_suffix;
+            catSelect.options[currentCatIndex + 1].textContent = `${editedCat.ID} - ${name}`;
         });
     </script>
 </body>

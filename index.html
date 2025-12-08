@@ -240,9 +240,12 @@
             'sprite_adult', 'sprite_senior', 'sprite_para_adult',
             'eye_colour', 'eye_colour2', 'reverse',
             'white_patches', 'vitiligo', 'points', 'white_patches_tint',
-            'tortie_base', 'tortie_marking', 'tortie_color', 'tortie_pattern',
+            'tortie_base', 'tortie_color', 'tortie_pattern', 'tortie_marking',
             'skin', 'tint', 'scars', 'accessory', 'opacity'
         ];
+        
+        // Tortie fields that should only be editable when pelt_name is Tortie or Calico
+        const TORTIE_FIELDS = ['tortie_base', 'tortie_color', 'tortie_pattern', 'tortie_marking'];
         
         const SECTION_RELATIONSHIPS = [
             'parent1', 'parent2', 'adoptive_parents',
@@ -728,6 +731,26 @@
             return container;
         }
         
+        // Check if pelt allows tortie editing
+        function isTortiePelt(peltName) {
+            return peltName === 'Tortie' || peltName === 'Calico';
+        }
+        
+        // Update tortie fields enabled/disabled state
+        function updateTortieFieldsState() {
+            const peltSelect = formGrid.querySelector('select[data-key="pelt_name"]');
+            const isTortie = peltSelect && isTortiePelt(peltSelect.value);
+            
+            for (const tortieKey of TORTIE_FIELDS) {
+                const field = formGrid.querySelector(`select[data-key="${tortieKey}"]`);
+                if (field) {
+                    field.disabled = !isTortie;
+                    field.style.opacity = isTortie ? '1' : '0.5';
+                    field.title = isTortie ? '' : 'Only editable for Tortie/Calico pelts';
+                }
+            }
+        }
+        
         // Render a single field row (label + input)
         function renderField(cat, key, def) {
             const val = getValue(cat, key);
@@ -787,6 +810,10 @@
                     }
                     if (val == null && def.nullable) {
                         input.value = '<None>';
+                    }
+                    // Add change listener for pelt_name to toggle tortie fields
+                    if (key === 'pelt_name') {
+                        input.addEventListener('change', updateTortieFieldsState);
                     }
                     break;
                     
@@ -945,6 +972,9 @@
                 if (key === 'pronouns' || key === 'status' || key === 'skill_dict') continue;
                 renderUnknownField(key, cat[key]);
             }
+            
+            // Set initial state for tortie fields based on current pelt
+            updateTortieFieldsState();
         }
     </script>
 </body>

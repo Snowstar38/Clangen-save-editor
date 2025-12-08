@@ -230,8 +230,9 @@
         
         // Define which fields belong to which section
         const SECTION_BASIC = [
-            'name_prefix', 'name_suffix', 'specsuffix_hidden', 
-            'gender', 'gender_align', 'moons', 'dead_moons'
+            'ID', 'name_prefix', 'name_suffix', 'specsuffix_hidden', 
+            'gender', 'gender_align', 'moons', 'dead_moons', 'backstory',
+            'trait', 'facets', 'skill_dict.primary', 'skill_dict.secondary'
         ];
         
         const SECTION_APPEARANCE = [
@@ -262,7 +263,9 @@
             'specsuffix_hidden': 'Hide suffix?',
             'name_prefix': 'Prefix',
             'name_suffix': 'Suffix',
-            'gender_align': 'Gender Alignment'
+            'gender_align': 'Gender Alignment',
+            'skill_dict.primary': 'Primary Skill',
+            'skill_dict.secondary': 'Secondary Skill',
         };
         
         // Build lookup table for cat ID -> display name

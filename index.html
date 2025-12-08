@@ -128,17 +128,17 @@
         let catsData = [];
         let currentCatIndex = null;
         
-        window.fileInput = document.getElementById('fileInput');
-        window.catSelect = document.getElementById('catSelect');
-        window.placeholderBox = document.getElementById('placeholderBox');
-        window.editorSection = document.getElementById('editorSection');
-        window.formGrid = document.getElementById('formGrid');
-        window.status = document.getElementById('status');
+        const fileInput = document.getElementById('fileInput');
+        const catSelect = document.getElementById('catSelect');
+        const placeholderBox = document.getElementById('placeholderBox');
+        const editorSection = document.getElementById('editorSection');
+        const formGrid = document.getElementById('formGrid');
+        const status = document.getElementById('status');
         
         fileInput.addEventListener('change', (e) => {
-            window.file = e.target.files[0];
+            const file = e.target.files[0];
             if (!file) return;
-            window.reader = new FileReader();
+            const reader = new FileReader();
             reader.onload = (event) => {
                 try {
                     catsData = JSON.parse(event.target.result);
@@ -158,7 +158,7 @@
         function populateCatSelect() {
             catSelect.innerHTML = '<option value="">-- Select a cat --</option>';
             catsData.forEach((cat, i) => {
-                window.opt = document.createElement('option');
+                const opt = document.createElement('option');
                 opt.value = i;
                 opt.textContent = `${cat.ID} - ${cat.name_prefix}${cat.name_suffix}`;
                 catSelect.appendChild(opt);
@@ -181,9 +181,9 @@
         
         function getValue(obj, key) {
             if (key.includes('.')) {
-                window.parts = key.split('.');
+                const parts = key.split('.');
                 let v = obj;
-                for (window.p of parts) {
+                for (const p of parts) {
                     if (v == null) return null;
                     v = v[p];
                 }
@@ -195,10 +195,10 @@
         function renderForm(cat) {
             formGrid.innerHTML = '';
             
-            for (window.[key, def] of Object.entries(FIELD_DEFS)) {
-                window.val = getValue(cat, key);
+            for (const [key, def] of Object.entries(FIELD_DEFS)) {
+                const val = getValue(cat, key);
                 
-                window.lbl = document.createElement('label');
+                const lbl = document.createElement('label');
                 lbl.textContent = key;
                 formGrid.appendChild(lbl);
                 
@@ -237,14 +237,14 @@
                         input = document.createElement('select');
                         input.dataset.key = key;
                         if (def.nullable) {
-                            window.noneOpt = document.createElement('option');
+                            const noneOpt = document.createElement('option');
                             noneOpt.value = '<None>';
                             noneOpt.textContent = '<None>';
                             input.appendChild(noneOpt);
                         }
                         if (def.options) {
-                            for (window.optVal of def.options) {
-                                window.opt = document.createElement('option');
+                            for (const optVal of def.options) {
+                                const opt = document.createElement('option');
                                 opt.value = optVal;
                                 opt.textContent = optVal;
                                 if (optVal === val) opt.selected = true;
@@ -259,9 +259,9 @@
                     case 'facets':
                         input = document.createElement('div');
                         input.className = 'compound';
-                        window.parts = (val || '0,0,0,0').split(',');
+                        const parts = (val || '0,0,0,0').split(',');
                         for (let i = 0; i < 4; i++) {
-                            window.fi = document.createElement('input');
+                            const fi = document.createElement('input');
                             fi.type = 'number';
                             fi.value = parts[i] || 0;
                             fi.dataset.key = key;
@@ -276,18 +276,18 @@
                         let sp = ['', '0', 'False'];
                         if (val) sp = val.split(',');
                         
-                        window.sd = document.createElement('select');
+                        const sd = document.createElement('select');
                         sd.dataset.key = key;
                         sd.dataset.skillPart = 'name';
                         if (def.nullable) {
-                            window.noneOpt = document.createElement('option');
+                            const noneOpt = document.createElement('option');
                             noneOpt.value = '<None>';
                             noneOpt.textContent = '<None>';
                             sd.appendChild(noneOpt);
                         }
                         if (def.options) {
-                            for (window.optVal of def.options) {
-                                window.opt = document.createElement('option');
+                            for (const optVal of def.options) {
+                                const opt = document.createElement('option');
                                 opt.value = optVal;
                                 opt.textContent = optVal;
                                 if (optVal === sp[0]) opt.selected = true;
@@ -297,14 +297,14 @@
                         if (!val && def.nullable) sd.value = '<None>';
                         input.appendChild(sd);
                         
-                        window.sl = document.createElement('input');
+                        const sl = document.createElement('input');
                         sl.type = 'number';
                         sl.value = sp[1] || 0;
                         sl.dataset.key = key;
                         sl.dataset.skillPart = 'level';
                         input.appendChild(sl);
                         
-                        window.sb = document.createElement('input');
+                        const sb = document.createElement('input');
                         sb.type = 'checkbox';
                         sb.checked = sp[2] === 'True';
                         sb.dataset.key = key;

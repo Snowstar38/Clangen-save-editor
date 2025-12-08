@@ -253,7 +253,7 @@
             // Blank option at the top
             const blankOpt = document.createElement('option');
             blankOpt.value = '';
-            blankOpt.textContent = '-- Select --';
+            blankOpt.textContent = '';
             select.appendChild(blankOpt);
             
             for (const optVal of options) {
@@ -457,7 +457,17 @@
                         
                     case 'catid-array':
                     case 'dropdown-array':
-                        input = createDropdownArrayField(key, def.options, val);
+                        input = createDropdownArrayField(key, def.options || [], val);
+                        break;
+                        
+                    case 'catid-array':
+                        // Still placeholder for now - will implement later
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = Array.isArray(val) ? val.join(', ') : '';
+                        input.placeholder = '(cat IDs - placeholder)';
+                        input.dataset.key = key;
+                        input.dataset.arrayPlaceholder = 'true';
                         break;
                         
                     default:

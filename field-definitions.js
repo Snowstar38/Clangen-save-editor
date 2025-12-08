@@ -7,7 +7,7 @@
 //   options: reference to options array (if dropdown)
 //   nullable: whether null is a valid value (will show <None> option)
 
-const FIELD_DEFS = {
+window.FIELD_DEFS = {
     'ID':                   { dataType: 'str',      inputType: 'display' },
     'name_prefix':          { dataType: 'str',      inputType: 'text' },
     'name_suffix':          { dataType: 'str',      inputType: 'text' },

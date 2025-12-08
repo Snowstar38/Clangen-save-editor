@@ -98,6 +98,58 @@
         .form-grid .compound select {
             flex: 1;
         }
+        
+        /* Array field styles */
+        .array-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .array-entry {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .array-entry select {
+            flex: 1;
+        }
+        .array-btn {
+            width: 26px;
+            height: 26px;
+            border-radius: 4px;
+            border: 1px solid #457b9d;
+            background: #1d3557;
+            color: #eee;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+        .array-btn:hover {
+            background: #264b73;
+        }
+        .array-btn.remove {
+            color: #e76f6f;
+        }
+        .array-btn.remove:hover {
+            background: #4a2020;
+            border-color: #e76f6f;
+        }
+        .array-btn.add {
+            color: #6fe78a;
+        }
+        .array-btn.add:hover {
+            background: #1a4a20;
+            border-color: #6fe78a;
+        }
+        .array-add-row {
+            display: flex;
+            justify-content: flex-start;
+        }
     </style>
 </head>
 <body>
@@ -190,6 +242,97 @@
                 return v;
             }
             return obj[key];
+        }
+        
+        // Create a dropdown for an array entry
+        function createArrayDropdown(key, options, selectedValue) {
+            const select = document.createElement('select');
+            select.dataset.key = key;
+            select.dataset.arrayItem = 'true';
+            
+            // Blank option at the top
+            const blankOpt = document.createElement('option');
+            blankOpt.value = '';
+            blankOpt.textContent = '-- Select --';
+            select.appendChild(blankOpt);
+            
+            for (const optVal of options) {
+                const opt = document.createElement('option');
+                opt.value = optVal;
+                opt.textContent = optVal;
+                if (optVal === selectedValue) opt.selected = true;
+                select.appendChild(opt);
+            }
+            
+            return select;
+        }
+        
+        // Create remove button
+        function createRemoveButton(container, entryRow) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'array-btn remove';
+            btn.textContent = '−';
+            btn.title = 'Remove this entry';
+            btn.addEventListener('click', () => {
+                entryRow.remove();
+            });
+            return btn;
+        }
+        
+        // Create an array entry row (dropdown + remove button)
+        function createArrayEntryRow(container, key, options, value) {
+            const row = document.createElement('div');
+            row.className = 'array-entry';
+            
+            const select = createArrayDropdown(key, options, value);
+            row.appendChild(select);
+            
+            const removeBtn = createRemoveButton(container, row);
+            row.appendChild(removeBtn);
+            
+            return row;
+        }
+        
+        // Create the add button row
+        function createAddButtonRow(container, key, options) {
+            const row = document.createElement('div');
+            row.className = 'array-add-row';
+            
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'array-btn add';
+            btn.textContent = '+';
+            btn.title = 'Add new entry';
+            btn.addEventListener('click', () => {
+                // Insert new entry row before the add button row
+                const newEntry = createArrayEntryRow(container, key, options, '');
+                container.insertBefore(newEntry, row);
+            });
+            
+            row.appendChild(btn);
+            return row;
+        }
+        
+        // Build the full array field container
+        function createDropdownArrayField(key, options, values) {
+            const container = document.createElement('div');
+            container.className = 'array-field';
+            container.dataset.key = key;
+            container.dataset.arrayField = 'true';
+            
+            // Create entry rows for existing values
+            const arr = Array.isArray(values) ? values : [];
+            for (const val of arr) {
+                const row = createArrayEntryRow(container, key, options, val);
+                container.appendChild(row);
+            }
+            
+            // Add the "+" button row at the bottom
+            const addRow = createAddButtonRow(container, key, options);
+            container.appendChild(addRow);
+            
+            return container;
         }
         
         function renderForm(cat) {

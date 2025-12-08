@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clangen Save Viewer</title>
+    <title>Clangen Save Editor</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -15,10 +15,7 @@
             color: #eee;
             min-height: 100vh;
         }
-        h1 {
-            color: #a8dadc;
-            margin-bottom: 20px;
-        }
+        h1 { color: #a8dadc; margin-bottom: 20px; }
         .controls {
             display: flex;
             gap: 15px;
@@ -27,7 +24,7 @@
             margin-bottom: 20px;
         }
         input[type="file"] { display: none; }
-        .file-label, select {
+        .file-label, .cat-select {
             padding: 10px 16px;
             border-radius: 6px;
             border: 1px solid #457b9d;
@@ -36,127 +33,123 @@
             font-size: 14px;
             cursor: pointer;
         }
-        .file-label:hover, select:hover {
-            background: #264b73;
-        }
-        select {
-            min-width: 200px;
-        }
-        select:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .status {
-            color: #a8dadc;
-            font-size: 14px;
-        }
-        .cat-display {
+        .file-label:hover, .cat-select:hover { background: #264b73; }
+        .cat-select { min-width: 200px; }
+        .cat-select:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status { color: #a8dadc; font-size: 14px; }
+        .placeholder-box {
             background: #16213e;
             border: 1px solid #457b9d;
             border-radius: 8px;
             padding: 20px;
-            white-space: pre-wrap;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-            overflow-x: auto;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-        .placeholder {
             color: #888;
             font-style: italic;
         }
         #editorSection { display: none; }
-        #catEditor {
-            width: 100%;
-            min-height: 60vh;
+        .form-grid {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 8px 12px;
+            align-items: center;
             background: #16213e;
             border: 1px solid #457b9d;
             border-radius: 8px;
-            padding: 15px;
-            font-family: 'Consolas', 'Monaco', monospace;
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .form-grid label {
             font-size: 13px;
-            line-height: 1.5;
-            color: #eee;
-            resize: vertical;
+            color: #a8dadc;
+            text-align: right;
         }
-        .editor-controls {
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        #saveBtn {
-            padding: 10px 20px;
-            border-radius: 6px;
-            border: 1px solid #2a9d8f;
-            background: #264653;
+        .form-grid input[type="text"],
+        .form-grid input[type="number"],
+        .form-grid select {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #457b9d;
+            background: #1d3557;
             color: #eee;
-            font-size: 14px;
+            font-size: 13px;
+            width: 100%;
+        }
+        .form-grid input:focus, .form-grid select:focus {
+            outline: none;
+            border-color: #a8dadc;
+        }
+        .form-grid input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
             cursor: pointer;
         }
-        #saveBtn:hover { background: #2a9d8f; }
-        .error { color: #e76f51; font-size: 14px; }
-        .success { color: #2a9d8f; font-size: 14px; }
+        .form-grid .display-only {
+            color: #888;
+            font-size: 13px;
+        }
+        .form-grid .compound {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .form-grid .compound input[type="number"] {
+            width: 60px;
+        }
+        .form-grid .compound select {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
-    <h1>Clangen Save Viewer</h1>
+    <h1>Clangen Save Editor</h1>
     
     <div class="controls">
         <label class="file-label">
             Load Save File
             <input type="file" id="fileInput" accept=".json">
         </label>
-        
-        <select id="catSelect" disabled>
+        <select id="catSelect" class="cat-select" disabled>
             <option value="">-- Select a cat --</option>
         </select>
-        
         <span class="status" id="status"></span>
     </div>
     
-    <div id="editorSection" style="display: none;">
-        <textarea id="catEditor"></textarea>
-        <div class="editor-controls">
-            <button id="saveBtn">Save File</button>
-            <span class="error" id="errorMsg"></span>
-        </div>
+    <div id="placeholderBox" class="placeholder-box">
+        Load a clan_cats.json file to view cat data.
     </div>
     
-    <div class="cat-display" id="catDisplay">
-        <span class="placeholder">Load a clan_cats.json file to view cat data.</span>
+    <div id="editorSection">
+        <div class="form-grid" id="formGrid"></div>
     </div>
 
+    <script src="dropdown_options.js"></script>
+    <script src="field_definitions.js"></script>
     <script>
         let catsData = [];
+        let currentCatIndex = null;
         
         const fileInput = document.getElementById('fileInput');
         const catSelect = document.getElementById('catSelect');
-        const catDisplay = document.getElementById('catDisplay');
+        const placeholderBox = document.getElementById('placeholderBox');
         const editorSection = document.getElementById('editorSection');
-        const catEditor = document.getElementById('catEditor');
-        const saveBtn = document.getElementById('saveBtn');
-        const errorMsg = document.getElementById('errorMsg');
+        const formGrid = document.getElementById('formGrid');
         const status = document.getElementById('status');
-        
-        let currentCatIndex = null;
         
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            
             const reader = new FileReader();
             reader.onload = (event) => {
                 try {
                     catsData = JSON.parse(event.target.result);
                     populateCatSelect();
                     status.textContent = `Loaded ${catsData.length} cats`;
-                    catDisplay.innerHTML = '<span class="placeholder">Select a cat from the dropdown.</span>';
+                    placeholderBox.textContent = 'Select a cat from the dropdown.';
+                    placeholderBox.style.display = 'block';
+                    editorSection.style.display = 'none';
                 } catch (err) {
-                    status.textContent = 'Error parsing JSON file';
-                    catDisplay.innerHTML = `<span class="placeholder">Error: ${err.message}</span>`;
+                    status.textContent = 'Error parsing JSON';
+                    placeholderBox.textContent = `Error: ${err.message}`;
                 }
             };
             reader.readAsText(file);
@@ -164,62 +157,180 @@
         
         function populateCatSelect() {
             catSelect.innerHTML = '<option value="">-- Select a cat --</option>';
-            catsData.forEach((cat, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                const name = cat.name_prefix + cat.name_suffix;
-                option.textContent = `${cat.ID} - ${name}`;
-                catSelect.appendChild(option);
+            catsData.forEach((cat, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `${cat.ID} - ${cat.name_prefix}${cat.name_suffix}`;
+                catSelect.appendChild(opt);
             });
             catSelect.disabled = false;
         }
         
         catSelect.addEventListener('change', (e) => {
-            const index = e.target.value;
-            if (index === '') {
+            if (e.target.value === '') {
+                placeholderBox.style.display = 'block';
                 editorSection.style.display = 'none';
-                catDisplay.style.display = 'block';
-                catDisplay.innerHTML = '<span class="placeholder">Select a cat from the dropdown.</span>';
                 currentCatIndex = null;
                 return;
             }
-            currentCatIndex = parseInt(index);
-            const cat = catsData[currentCatIndex];
-            catEditor.value = JSON.stringify(cat, null, 2);
-            errorMsg.textContent = '';
-            catDisplay.style.display = 'none';
+            currentCatIndex = parseInt(e.target.value);
+            renderForm(catsData[currentCatIndex]);
+            placeholderBox.style.display = 'none';
             editorSection.style.display = 'block';
         });
         
-        saveBtn.addEventListener('click', () => {
-            if (currentCatIndex === null) return;
-            
-            let editedCat;
-            try {
-                editedCat = JSON.parse(catEditor.value);
-            } catch (err) {
-                errorMsg.className = 'error';
-                errorMsg.textContent = `Invalid JSON: ${err.message}`;
-                return;
+        function getValue(obj, key) {
+            if (key.includes('.')) {
+                const parts = key.split('.');
+                let v = obj;
+                for (const p of parts) {
+                    if (v == null) return null;
+                    v = v[p];
+                }
+                return v;
             }
+            return obj[key];
+        }
+        
+        function renderForm(cat) {
+            formGrid.innerHTML = '';
             
-            catsData[currentCatIndex] = editedCat;
-            
-            const blob = new Blob([JSON.stringify(catsData, null, 4)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'clan_cats.json';
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            errorMsg.className = 'success';
-            errorMsg.textContent = 'File saved!';
-            
-            // Update dropdown in case ID or name changed
-            const name = editedCat.name_prefix + editedCat.name_suffix;
-            catSelect.options[currentCatIndex + 1].textContent = `${editedCat.ID} - ${name}`;
-        });
+            for (const [key, def] of Object.entries(FIELD_DEFS)) {
+                const val = getValue(cat, key);
+                
+                const lbl = document.createElement('label');
+                lbl.textContent = key;
+                formGrid.appendChild(lbl);
+                
+                let input;
+                
+                switch (def.inputType) {
+                    case 'display':
+                        input = document.createElement('span');
+                        input.className = 'display-only';
+                        input.textContent = val ?? '';
+                        break;
+                        
+                    case 'text':
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = val ?? '';
+                        if (def.nullable) input.placeholder = '(none)';
+                        input.dataset.key = key;
+                        break;
+                        
+                    case 'number':
+                        input = document.createElement('input');
+                        input.type = 'number';
+                        input.value = val ?? 0;
+                        input.dataset.key = key;
+                        break;
+                        
+                    case 'checkbox':
+                        input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = !!val;
+                        input.dataset.key = key;
+                        break;
+                        
+                    case 'dropdown':
+                        input = document.createElement('select');
+                        input.dataset.key = key;
+                        if (def.nullable) {
+                            const noneOpt = document.createElement('option');
+                            noneOpt.value = '<None>';
+                            noneOpt.textContent = '<None>';
+                            input.appendChild(noneOpt);
+                        }
+                        if (def.options) {
+                            for (const optVal of def.options) {
+                                const opt = document.createElement('option');
+                                opt.value = optVal;
+                                opt.textContent = optVal;
+                                if (optVal === val) opt.selected = true;
+                                input.appendChild(opt);
+                            }
+                        }
+                        if (val == null && def.nullable) {
+                            input.value = '<None>';
+                        }
+                        break;
+                        
+                    case 'facets':
+                        input = document.createElement('div');
+                        input.className = 'compound';
+                        const parts = (val || '0,0,0,0').split(',');
+                        for (let i = 0; i < 4; i++) {
+                            const fi = document.createElement('input');
+                            fi.type = 'number';
+                            fi.value = parts[i] || 0;
+                            fi.dataset.key = key;
+                            fi.dataset.facetIndex = i;
+                            input.appendChild(fi);
+                        }
+                        break;
+                        
+                    case 'skill':
+                        input = document.createElement('div');
+                        input.className = 'compound';
+                        let sp = ['', '0', 'False'];
+                        if (val) sp = val.split(',');
+                        
+                        const sd = document.createElement('select');
+                        sd.dataset.key = key;
+                        sd.dataset.skillPart = 'name';
+                        if (def.nullable) {
+                            const noneOpt = document.createElement('option');
+                            noneOpt.value = '<None>';
+                            noneOpt.textContent = '<None>';
+                            sd.appendChild(noneOpt);
+                        }
+                        if (def.options) {
+                            for (const optVal of def.options) {
+                                const opt = document.createElement('option');
+                                opt.value = optVal;
+                                opt.textContent = optVal;
+                                if (optVal === sp[0]) opt.selected = true;
+                                sd.appendChild(opt);
+                            }
+                        }
+                        if (!val && def.nullable) sd.value = '<None>';
+                        input.appendChild(sd);
+                        
+                        const sl = document.createElement('input');
+                        sl.type = 'number';
+                        sl.value = sp[1] || 0;
+                        sl.dataset.key = key;
+                        sl.dataset.skillPart = 'level';
+                        input.appendChild(sl);
+                        
+                        const sb = document.createElement('input');
+                        sb.type = 'checkbox';
+                        sb.checked = sp[2] === 'True';
+                        sb.dataset.key = key;
+                        sb.dataset.skillPart = 'bool';
+                        input.appendChild(sb);
+                        break;
+                        
+                    case 'catid-array':
+                    case 'dropdown-array':
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = Array.isArray(val) ? val.join(', ') : '';
+                        input.placeholder = '(array - placeholder)';
+                        input.dataset.key = key;
+                        input.dataset.arrayPlaceholder = 'true';
+                        break;
+                        
+                    default:
+                        input = document.createElement('span');
+                        input.className = 'display-only';
+                        input.textContent = '(unknown field type)';
+                }
+                
+                formGrid.appendChild(input);
+            }
+        }
     </script>
 </body>
 </html>

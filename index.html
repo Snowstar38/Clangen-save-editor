@@ -356,6 +356,17 @@
                         break;
                     }
                     
+                    case 'catid': {
+                        const el = formGrid.querySelector(`select[data-key="${key}"][data-catid-single="true"]`);
+                        if (el) {
+                            value = el.value;
+                            if (value === '<None>' || value === '') {
+                                value = null;
+                            }
+                        }
+                        break;
+                    }
+                    
                     case 'facets': {
                         const els = formGrid.querySelectorAll(`input[type="number"][data-key="${key}"]`);
                         if (els.length === 4) {
@@ -479,7 +490,7 @@
             return select;
         }
         
-        // Create a dropdown for cat ID selection (value = ID, display = name)
+        // Create a dropdown for cat ID selection (value = ID, display = name) - for arrays
         function createCatIdDropdown(key, selectedId) {
             const select = document.createElement('select');
             select.dataset.key = key;
@@ -491,12 +502,49 @@
             blankOpt.textContent = '';
             select.appendChild(blankOpt);
             
+            const currentCatId = catsData[currentCatIndex]?.ID;
             for (const cat of catsData) {
+                // Exclude the currently selected cat
+                if (cat.ID === currentCatId) continue;
+                
                 const opt = document.createElement('option');
                 opt.value = cat.ID;
                 opt.textContent = catLookup[cat.ID];
                 if (cat.ID === selectedId) opt.selected = true;
                 select.appendChild(opt);
+            }
+            
+            return select;
+        }
+        
+        // Create a single cat ID dropdown (not for arrays) - used for parent1, parent2, mentor
+        function createSingleCatIdDropdown(key, selectedId, nullable) {
+            const select = document.createElement('select');
+            select.dataset.key = key;
+            select.dataset.catidSingle = 'true';
+            
+            if (nullable) {
+                const noneOpt = document.createElement('option');
+                noneOpt.value = '<None>';
+                noneOpt.textContent = '<None>';
+                select.appendChild(noneOpt);
+            }
+            
+            const currentCatId = catsData[currentCatIndex]?.ID;
+            for (const cat of catsData) {
+                // Exclude the currently selected cat
+                if (cat.ID === currentCatId) continue;
+                
+                const opt = document.createElement('option');
+                opt.value = cat.ID;
+                opt.textContent = catLookup[cat.ID];
+                if (cat.ID === selectedId) opt.selected = true;
+                select.appendChild(opt);
+            }
+            
+            // Set to <None> if value is null and nullable
+            if (selectedId == null && nullable) {
+                select.value = '<None>';
             }
             
             return select;
@@ -682,6 +730,10 @@
                         if (val == null && def.nullable) {
                             input.value = '<None>';
                         }
+                        break;
+                        
+                    case 'catid':
+                        input = createSingleCatIdDropdown(key, val, def.nullable);
                         break;
                         
                     case 'facets':

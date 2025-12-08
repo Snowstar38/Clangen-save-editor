@@ -268,7 +268,7 @@
         }
         
         // Create remove button
-        function createRemoveButton(container, entryRow) {
+        function createRemoveButton(entryRow) {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'array-btn remove';
@@ -281,14 +281,14 @@
         }
         
         // Create an array entry row (dropdown + remove button)
-        function createArrayEntryRow(container, key, options, value) {
+        function createArrayEntryRow(key, options, value) {
             const row = document.createElement('div');
             row.className = 'array-entry';
             
             const select = createArrayDropdown(key, options, value);
             row.appendChild(select);
             
-            const removeBtn = createRemoveButton(container, row);
+            const removeBtn = createRemoveButton(row);
             row.appendChild(removeBtn);
             
             return row;
@@ -306,7 +306,7 @@
             btn.title = 'Add new entry';
             btn.addEventListener('click', () => {
                 // Insert new entry row before the add button row
-                const newEntry = createArrayEntryRow(container, key, options, '');
+                const newEntry = createArrayEntryRow(key, options, '');
                 container.insertBefore(newEntry, row);
             });
             
@@ -324,7 +324,7 @@
             // Create entry rows for existing values
             const arr = Array.isArray(values) ? values : [];
             for (const val of arr) {
-                const row = createArrayEntryRow(container, key, options, val);
+                const row = createArrayEntryRow(key, options, val);
                 container.appendChild(row);
             }
             

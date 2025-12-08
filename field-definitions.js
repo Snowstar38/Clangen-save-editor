@@ -31,12 +31,10 @@ const FIELD_DEFS = {
     'patrol_with_mentor':   { dataType: 'int',      inputType: 'number' },
     'mate':                 { dataType: 'list',     inputType: 'catid-array' },
     'previous_mates':       { dataType: 'list',     inputType: 'catid-array' },
-    'dead':                 { dataType: 'bool',     inputType: 'checkbox' },
     'paralyzed':            { dataType: 'bool',     inputType: 'checkbox' },
     'no_kits':              { dataType: 'bool',     inputType: 'checkbox' },
     'no_retire':            { dataType: 'bool',     inputType: 'checkbox' },
     'no_mates':             { dataType: 'bool',     inputType: 'checkbox' },
-    'exiled':               { dataType: 'bool',     inputType: 'checkbox' },
     'pelt_name':            { dataType: 'str',      inputType: 'dropdown',  options: peltPatterns },
     'pelt_color':           { dataType: 'str',      inputType: 'dropdown',  options: peltColours },
     'pelt_length':          { dataType: 'str',      inputType: 'dropdown',  options: peltLengths },
@@ -53,7 +51,6 @@ const FIELD_DEFS = {
     'vitiligo':             { dataType: 'str',      inputType: 'dropdown',  options: vitiligoMarkings, nullable: true },
     'points':               { dataType: 'str',      inputType: 'dropdown',  options: pointMarkings, nullable: true },
     'white_patches_tint':   { dataType: 'str',      inputType: 'dropdown',  options: whitePatchesTints, nullable: true },
-    'pattern':              { dataType: 'str',      inputType: 'dropdown',  options: tortieBases, nullable: true },
     'tortie_base':          { dataType: 'str',      inputType: 'dropdown',  options: peltPatterns, nullable: true },
     'tortie_color':         { dataType: 'str',      inputType: 'dropdown',  options: peltColours, nullable: true },
     'tortie_pattern':       { dataType: 'str',      inputType: 'dropdown',  options: peltPatterns, nullable: true },
@@ -68,13 +65,8 @@ const FIELD_DEFS = {
     'dead_moons':           { dataType: 'int',      inputType: 'number' },
     'current_apprentice':   { dataType: 'list',     inputType: 'catid-array' },
     'former_apprentices':   { dataType: 'list',     inputType: 'catid-array' },
-    'df':                   { dataType: 'bool',     inputType: 'checkbox' },
-    'outside':              { dataType: 'bool',     inputType: 'checkbox' },
     'faded_offspring':      { dataType: 'list',     inputType: 'catid-array' },
     'opacity':              { dataType: 'int',      inputType: 'number' },
     'prevent_fading':       { dataType: 'bool',     inputType: 'checkbox' },
     'favourite':            { dataType: 'bool',     inputType: 'checkbox' },
 };
-
-// Still need to define in dropdown_options.js:
-// (none - all complete!)

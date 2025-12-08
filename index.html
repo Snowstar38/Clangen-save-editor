@@ -24,7 +24,7 @@
             margin-bottom: 20px;
         }
         input[type="file"] { display: none; }
-        .file-label, .cat-select {
+        .file-label, .cat-select, .save-btn {
             padding: 10px 16px;
             border-radius: 6px;
             border: 1px solid #457b9d;
@@ -33,7 +33,18 @@
             font-size: 14px;
             cursor: pointer;
         }
-        .file-label:hover, .cat-select:hover { background: #264b73; }
+        .file-label:hover, .cat-select:hover, .save-btn:hover { background: #264b73; }
+        .save-btn {
+            background: #2a6041;
+            border-color: #4a9;
+        }
+        .save-btn:hover {
+            background: #3a7a51;
+        }
+        .save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .cat-select { min-width: 200px; }
         .cat-select:disabled { opacity: 0.5; cursor: not-allowed; }
         .status { color: #a8dadc; font-size: 14px; }
@@ -163,6 +174,7 @@
         <select id="catSelect" class="cat-select" disabled>
             <option value="">-- Select a cat --</option>
         </select>
+        <button id="saveBtn" class="save-btn" disabled>Save File</button>
         <span class="status" id="status"></span>
     </div>
     
@@ -180,9 +192,11 @@
         let catsData = [];
         let catLookup = {};  // id -> display string
         let currentCatIndex = null;
+        let originalTraits = {};  // Track original trait values per cat ID
         
         const fileInput = document.getElementById('fileInput');
         const catSelect = document.getElementById('catSelect');
+        const saveBtn = document.getElementById('saveBtn');
         const placeholderBox = document.getElementById('placeholderBox');
         const editorSection = document.getElementById('editorSection');
         const formGrid = document.getElementById('formGrid');
@@ -196,6 +210,14 @@
             }
         }
         
+        // Store original traits for all cats (for facet deletion logic)
+        function storeOriginalTraits() {
+            originalTraits = {};
+            for (const cat of catsData) {
+                originalTraits[cat.ID] = cat.trait;
+            }
+        }
+        
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -203,12 +225,14 @@
             reader.onload = (event) => {
                 try {
                     catsData = JSON.parse(event.target.result);
-                    buildCatLookup();  // Build lookup when file loads
+                    buildCatLookup();
+                    storeOriginalTraits();
                     populateCatSelect();
                     status.textContent = `Loaded ${catsData.length} cats`;
                     placeholderBox.textContent = 'Select a cat from the dropdown.';
                     placeholderBox.style.display = 'block';
                     editorSection.style.display = 'none';
+                    saveBtn.disabled = false;
                 } catch (err) {
                     status.textContent = 'Error parsing JSON';
                     placeholderBox.textContent = `Error: ${err.message}`;
@@ -229,6 +253,11 @@
         }
         
         catSelect.addEventListener('change', (e) => {
+            // Save current cat before switching
+            if (currentCatIndex !== null) {
+                applyFormDataToCat(currentCatIndex);
+            }
+            
             if (e.target.value === '') {
                 placeholderBox.style.display = 'block';
                 editorSection.style.display = 'none';
@@ -253,6 +282,180 @@
             }
             return obj[key];
         }
+        
+        function setValue(obj, key, value) {
+            if (key.includes('.')) {
+                const parts = key.split('.');
+                let target = obj;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (target[parts[i]] == null) {
+                        target[parts[i]] = {};
+                    }
+                    target = target[parts[i]];
+                }
+                target[parts[parts.length - 1]] = value;
+            } else {
+                obj[key] = value;
+            }
+        }
+        
+        // Collect form data and apply to the cat object at given index
+        function applyFormDataToCat(catIndex) {
+            const cat = catsData[catIndex];
+            let traitChanged = false;
+            let newTrait = null;
+            
+            for (const [key, def] of Object.entries(FIELD_DEFS)) {
+                if (def.inputType === 'display') continue;
+                
+                let value;
+                
+                switch (def.inputType) {
+                    case 'text': {
+                        const el = formGrid.querySelector(`input[type="text"][data-key="${key}"]`);
+                        if (el) {
+                            value = el.value.trim();
+                            if (def.nullable && value === '') {
+                                value = null;
+                            }
+                        }
+                        break;
+                    }
+                    
+                    case 'number': {
+                        const el = formGrid.querySelector(`input[type="number"][data-key="${key}"]`);
+                        if (el) {
+                            value = parseInt(el.value) || 0;
+                        }
+                        break;
+                    }
+                    
+                    case 'checkbox': {
+                        const el = formGrid.querySelector(`input[type="checkbox"][data-key="${key}"]`);
+                        if (el) {
+                            value = el.checked;
+                        }
+                        break;
+                    }
+                    
+                    case 'dropdown': {
+                        const el = formGrid.querySelector(`select[data-key="${key}"]`);
+                        if (el) {
+                            value = el.value;
+                            if (value === '<None>') {
+                                value = null;
+                            }
+                            // Track trait changes
+                            if (key === 'trait') {
+                                newTrait = value;
+                                if (value !== originalTraits[cat.ID]) {
+                                    traitChanged = true;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    
+                    case 'facets': {
+                        const els = formGrid.querySelectorAll(`input[type="number"][data-key="${key}"]`);
+                        if (els.length === 4) {
+                            const parts = [];
+                            els.forEach(el => parts[parseInt(el.dataset.facetIndex)] = el.value || '0');
+                            value = parts.join(',');
+                        }
+                        break;
+                    }
+                    
+                    case 'skill': {
+                        const nameEl = formGrid.querySelector(`select[data-key="${key}"][data-skill-part="name"]`);
+                        const levelEl = formGrid.querySelector(`input[data-key="${key}"][data-skill-part="level"]`);
+                        const boolEl = formGrid.querySelector(`input[data-key="${key}"][data-skill-part="bool"]`);
+                        
+                        if (nameEl) {
+                            if (nameEl.value === '<None>') {
+                                value = null;
+                            } else {
+                                const level = levelEl ? (levelEl.value || '0') : '0';
+                                const bool = boolEl ? (boolEl.checked ? 'True' : 'False') : 'False';
+                                value = `${nameEl.value},${level},${bool}`;
+                            }
+                        }
+                        break;
+                    }
+                    
+                    case 'dropdown-array': {
+                        const container = formGrid.querySelector(`.array-field[data-key="${key}"]`);
+                        if (container) {
+                            const selects = container.querySelectorAll('select[data-array-item="true"]');
+                            value = [];
+                            selects.forEach(sel => {
+                                if (sel.value && sel.value !== '') {
+                                    value.push(sel.value);
+                                }
+                            });
+                        }
+                        break;
+                    }
+                    
+                    case 'catid-array': {
+                        const container = formGrid.querySelector(`.array-field[data-key="${key}"]`);
+                        if (container) {
+                            const selects = container.querySelectorAll('select[data-array-item="true"]');
+                            value = [];
+                            selects.forEach(sel => {
+                                if (sel.value && sel.value !== '') {
+                                    value.push(sel.value);
+                                }
+                            });
+                        }
+                        break;
+                    }
+                }
+                
+                if (value !== undefined) {
+                    setValue(cat, key, value);
+                }
+            }
+            
+            // Handle skill_dict primary/secondary swap
+            if (cat.skill_dict) {
+                if (cat.skill_dict.primary === null && cat.skill_dict.secondary !== null) {
+                    cat.skill_dict.primary = cat.skill_dict.secondary;
+                    cat.skill_dict.secondary = null;
+                }
+            }
+            
+            // Handle trait change -> delete facets
+            if (traitChanged) {
+                delete cat.facets;
+                // Update the stored original trait so subsequent saves don't keep deleting
+                originalTraits[cat.ID] = newTrait;
+            }
+        }
+        
+        // Save button handler
+        saveBtn.addEventListener('click', () => {
+            // Apply current form data before saving
+            if (currentCatIndex !== null) {
+                applyFormDataToCat(currentCatIndex);
+            }
+            
+            // Generate JSON
+            const jsonStr = JSON.stringify(catsData, null, 4);
+            
+            // Trigger download
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'clan_cats.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            status.textContent = 'File saved!';
+        });
         
         // Create a dropdown for a regular array entry (scars, accessories, etc.)
         function createArrayDropdown(key, options, selectedValue) {
@@ -281,7 +484,7 @@
             const select = document.createElement('select');
             select.dataset.key = key;
             select.dataset.arrayItem = 'true';
-            select.dataset.catId = 'true';  // Mark as cat ID field
+            select.dataset.catId = 'true';
             
             const blankOpt = document.createElement('option');
             blankOpt.value = '';
@@ -290,8 +493,8 @@
             
             for (const cat of catsData) {
                 const opt = document.createElement('option');
-                opt.value = cat.ID;  // Stored value is just the ID
-                opt.textContent = catLookup[cat.ID];  // Display is human-readable
+                opt.value = cat.ID;
+                opt.textContent = catLookup[cat.ID];
                 if (cat.ID === selectedId) opt.selected = true;
                 select.appendChild(opt);
             }
@@ -403,7 +606,7 @@
             container.className = 'array-field';
             container.dataset.key = key;
             container.dataset.arrayField = 'true';
-            container.dataset.catIdArray = 'true';  // Mark as cat ID array
+            container.dataset.catIdArray = 'true';
             
             const arr = Array.isArray(values) ? values : [];
             for (const val of arr) {

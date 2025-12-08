@@ -178,6 +178,7 @@
     <script src="field-definitions.js"></script>
     <script>
         let catsData = [];
+        let catLookup = {};  // id -> display string
         let currentCatIndex = null;
         
         const fileInput = document.getElementById('fileInput');
@@ -187,6 +188,14 @@
         const formGrid = document.getElementById('formGrid');
         const status = document.getElementById('status');
         
+        // Build lookup table for cat ID -> display name
+        function buildCatLookup() {
+            catLookup = {};
+            for (const cat of catsData) {
+                catLookup[cat.ID] = `${cat.name_prefix}${cat.name_suffix} - ID #${cat.ID}`;
+            }
+        }
+        
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -194,6 +203,7 @@
             reader.onload = (event) => {
                 try {
                     catsData = JSON.parse(event.target.result);
+                    buildCatLookup();  // Build lookup when file loads
                     populateCatSelect();
                     status.textContent = `Loaded ${catsData.length} cats`;
                     placeholderBox.textContent = 'Select a cat from the dropdown.';
@@ -244,13 +254,12 @@
             return obj[key];
         }
         
-        // Create a dropdown for an array entry
+        // Create a dropdown for a regular array entry (scars, accessories, etc.)
         function createArrayDropdown(key, options, selectedValue) {
             const select = document.createElement('select');
             select.dataset.key = key;
             select.dataset.arrayItem = 'true';
             
-            // Blank option at the top
             const blankOpt = document.createElement('option');
             blankOpt.value = '';
             blankOpt.textContent = '';
@@ -261,6 +270,29 @@
                 opt.value = optVal;
                 opt.textContent = optVal;
                 if (optVal === selectedValue) opt.selected = true;
+                select.appendChild(opt);
+            }
+            
+            return select;
+        }
+        
+        // Create a dropdown for cat ID selection (value = ID, display = name)
+        function createCatIdDropdown(key, selectedId) {
+            const select = document.createElement('select');
+            select.dataset.key = key;
+            select.dataset.arrayItem = 'true';
+            select.dataset.catId = 'true';  // Mark as cat ID field
+            
+            const blankOpt = document.createElement('option');
+            blankOpt.value = '';
+            blankOpt.textContent = '';
+            select.appendChild(blankOpt);
+            
+            for (const cat of catsData) {
+                const opt = document.createElement('option');
+                opt.value = cat.ID;  // Stored value is just the ID
+                opt.textContent = catLookup[cat.ID];  // Display is human-readable
+                if (cat.ID === selectedId) opt.selected = true;
                 select.appendChild(opt);
             }
             
@@ -280,7 +312,7 @@
             return btn;
         }
         
-        // Create an array entry row (dropdown + remove button)
+        // Create an array entry row for regular dropdowns
         function createArrayEntryRow(key, options, value) {
             const row = document.createElement('div');
             row.className = 'array-entry';
@@ -294,7 +326,21 @@
             return row;
         }
         
-        // Create the add button row
+        // Create an array entry row for cat ID dropdowns
+        function createCatIdEntryRow(key, value) {
+            const row = document.createElement('div');
+            row.className = 'array-entry';
+            
+            const select = createCatIdDropdown(key, value);
+            row.appendChild(select);
+            
+            const removeBtn = createRemoveButton(row);
+            row.appendChild(removeBtn);
+            
+            return row;
+        }
+        
+        // Create the add button row for regular arrays
         function createAddButtonRow(container, key, options) {
             const row = document.createElement('div');
             row.className = 'array-add-row';
@@ -305,7 +351,6 @@
             btn.textContent = '+';
             btn.title = 'Add new entry';
             btn.addEventListener('click', () => {
-                // Insert new entry row before the add button row
                 const newEntry = createArrayEntryRow(key, options, '');
                 container.insertBefore(newEntry, row);
             });
@@ -314,22 +359,59 @@
             return row;
         }
         
-        // Build the full array field container
+        // Create the add button row for cat ID arrays
+        function createCatIdAddButtonRow(container, key) {
+            const row = document.createElement('div');
+            row.className = 'array-add-row';
+            
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'array-btn add';
+            btn.textContent = '+';
+            btn.title = 'Add new entry';
+            btn.addEventListener('click', () => {
+                const newEntry = createCatIdEntryRow(key, '');
+                container.insertBefore(newEntry, row);
+            });
+            
+            row.appendChild(btn);
+            return row;
+        }
+        
+        // Build the full array field container for regular dropdowns
         function createDropdownArrayField(key, options, values) {
             const container = document.createElement('div');
             container.className = 'array-field';
             container.dataset.key = key;
             container.dataset.arrayField = 'true';
             
-            // Create entry rows for existing values
             const arr = Array.isArray(values) ? values : [];
             for (const val of arr) {
                 const row = createArrayEntryRow(key, options, val);
                 container.appendChild(row);
             }
             
-            // Add the "+" button row at the bottom
             const addRow = createAddButtonRow(container, key, options);
+            container.appendChild(addRow);
+            
+            return container;
+        }
+        
+        // Build the full array field container for cat IDs
+        function createCatIdArrayField(key, values) {
+            const container = document.createElement('div');
+            container.className = 'array-field';
+            container.dataset.key = key;
+            container.dataset.arrayField = 'true';
+            container.dataset.catIdArray = 'true';  // Mark as cat ID array
+            
+            const arr = Array.isArray(values) ? values : [];
+            for (const val of arr) {
+                const row = createCatIdEntryRow(key, val);
+                container.appendChild(row);
+            }
+            
+            const addRow = createCatIdAddButtonRow(container, key);
             container.appendChild(addRow);
             
             return container;
@@ -455,19 +537,12 @@
                         input.appendChild(sb);
                         break;
                         
-                    case 'catid-array':
                     case 'dropdown-array':
                         input = createDropdownArrayField(key, def.options || [], val);
                         break;
                         
                     case 'catid-array':
-                        // Still placeholder for now - will implement later
-                        input = document.createElement('input');
-                        input.type = 'text';
-                        input.value = Array.isArray(val) ? val.join(', ') : '';
-                        input.placeholder = '(cat IDs - placeholder)';
-                        input.dataset.key = key;
-                        input.dataset.arrayPlaceholder = 'true';
+                        input = createCatIdArrayField(key, val);
                         break;
                         
                     default:

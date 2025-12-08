@@ -52,6 +52,7 @@ const FIELD_DEFS = {
     'points':               { dataType: 'str',      inputType: 'dropdown',  options: pointMarkings, nullable: true },
     'white_patches_tint':   { dataType: 'str',      inputType: 'dropdown',  options: whitePatchesTints, nullable: true },
     'tortie_base':          { dataType: 'str',      inputType: 'dropdown',  options: peltPatterns, nullable: true },
+    'tortie_marking':       { dataType: 'str',      inputType: 'dropdown',  options: tortieBases, nullable: true },
     'tortie_color':         { dataType: 'str',      inputType: 'dropdown',  options: peltColours, nullable: true },
     'tortie_pattern':       { dataType: 'str',      inputType: 'dropdown',  options: peltPatterns, nullable: true },
     'skin':                 { dataType: 'str',      inputType: 'dropdown',  options: skins },

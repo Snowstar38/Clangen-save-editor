@@ -110,6 +110,33 @@
             flex: 1;
         }
         
+        /* Section header styles */
+        .section-header {
+            grid-column: 1 / -1;
+            font-size: 16px;
+            font-weight: bold;
+            color: #a8dadc;
+            border-bottom: 1px solid #457b9d;
+            padding: 12px 0 6px 0;
+            margin-top: 10px;
+        }
+        .section-header:first-child {
+            margin-top: 0;
+        }
+        .section-note {
+            grid-column: 1 / -1;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .section-note a {
+            color: #6fa8dc;
+            text-decoration: none;
+        }
+        .section-note a:hover {
+            text-decoration: underline;
+        }
+        
         /* Array field styles */
         .array-field {
             display: flex;
@@ -185,7 +212,6 @@
     <div id="editorSection">
         <div class="form-grid" id="formGrid"></div>
     </div>
-
     <script src="dropdown-options.js"></script>
     <script src="field-definitions.js"></script>
     <script>
@@ -201,6 +227,40 @@
         const editorSection = document.getElementById('editorSection');
         const formGrid = document.getElementById('formGrid');
         const status = document.getElementById('status');
+        
+        // Define which fields belong to which section
+        const SECTION_BASIC = [
+            'name_prefix', 'name_suffix', 'specsuffix_hidden', 
+            'gender', 'gender_align', 'moons', 'dead_moons'
+        ];
+        
+        const SECTION_APPEARANCE = [
+            'pelt_name', 'pelt_color', 'pelt_length',
+            'sprite_newborn', 'sprite_kitten', 'sprite_adolescent', 
+            'sprite_adult', 'sprite_senior', 'sprite_para_adult',
+            'eye_colour', 'eye_colour2', 'reverse',
+            'white_patches', 'vitiligo', 'points', 'white_patches_tint',
+            'tortie_base', 'tortie_marking', 'tortie_color', 'tortie_pattern',
+            'skin', 'tint', 'scars', 'accessory', 'opacity'
+        ];
+        
+        const SECTION_RELATIONSHIPS = [
+            'parent1', 'parent2', 'adoptive_parents',
+            'mentor', 'former_mentor', 'patrol_with_mentor',
+            'mate', 'previous_mates',
+            'current_apprentice', 'former_apprentices', 'faded_offspring'
+        ];
+        
+        // Fields to skip entirely (complex objects handled elsewhere)
+        const SKIP_FIELDS = ['pronouns', 'status', 'skill_dict.hidden'];
+        
+        // Custom display labels for certain fields
+        const DISPLAY_LABELS = {
+            'specsuffix_hidden': 'Hide suffix?',
+            'name_prefix': 'Prefix',
+            'name_suffix': 'Suffix',
+            'gender_align': 'Gender Alignment'
+        };
         
         // Build lookup table for cat ID -> display name
         function buildCatLookup() {
@@ -668,145 +728,222 @@
             return container;
         }
         
+        // Render a single field row (label + input)
+        function renderField(cat, key, def) {
+            const val = getValue(cat, key);
+            
+            const lbl = document.createElement('label');
+            lbl.textContent = DISPLAY_LABELS[key] || key;
+            formGrid.appendChild(lbl);
+            
+            let input;
+            
+            switch (def.inputType) {
+                case 'display':
+                    input = document.createElement('span');
+                    input.className = 'display-only';
+                    input.textContent = val ?? '';
+                    break;
+                    
+                case 'text':
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = val ?? '';
+                    if (def.nullable) input.placeholder = '(none)';
+                    input.dataset.key = key;
+                    break;
+                    
+                case 'number':
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.value = val ?? 0;
+                    input.dataset.key = key;
+                    break;
+                    
+                case 'checkbox':
+                    input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.checked = !!val;
+                    input.dataset.key = key;
+                    break;
+                    
+                case 'dropdown':
+                    input = document.createElement('select');
+                    input.dataset.key = key;
+                    if (def.nullable) {
+                        const noneOpt = document.createElement('option');
+                        noneOpt.value = '<None>';
+                        noneOpt.textContent = '<None>';
+                        input.appendChild(noneOpt);
+                    }
+                    if (def.options) {
+                        for (const optVal of def.options) {
+                            const opt = document.createElement('option');
+                            opt.value = optVal;
+                            opt.textContent = optVal;
+                            if (optVal === val) opt.selected = true;
+                            input.appendChild(opt);
+                        }
+                    }
+                    if (val == null && def.nullable) {
+                        input.value = '<None>';
+                    }
+                    break;
+                    
+                case 'catid':
+                    input = createSingleCatIdDropdown(key, val, def.nullable);
+                    break;
+                    
+                case 'facets':
+                    input = document.createElement('div');
+                    input.className = 'compound';
+                    const parts = (val || '0,0,0,0').split(',');
+                    for (let i = 0; i < 4; i++) {
+                        const fi = document.createElement('input');
+                        fi.type = 'number';
+                        fi.value = parts[i] || 0;
+                        fi.dataset.key = key;
+                        fi.dataset.facetIndex = i;
+                        input.appendChild(fi);
+                    }
+                    break;
+                    
+                case 'skill':
+                    input = document.createElement('div');
+                    input.className = 'compound';
+                    let sp = ['', '0', 'False'];
+                    if (val) sp = val.split(',');
+                    
+                    const sd = document.createElement('select');
+                    sd.dataset.key = key;
+                    sd.dataset.skillPart = 'name';
+                    if (def.nullable) {
+                        const noneOpt = document.createElement('option');
+                        noneOpt.value = '<None>';
+                        noneOpt.textContent = '<None>';
+                        sd.appendChild(noneOpt);
+                    }
+                    if (def.options) {
+                        for (const optVal of def.options) {
+                            const opt = document.createElement('option');
+                            opt.value = optVal;
+                            opt.textContent = optVal;
+                            if (optVal === sp[0]) opt.selected = true;
+                            sd.appendChild(opt);
+                        }
+                    }
+                    if (!val && def.nullable) sd.value = '<None>';
+                    input.appendChild(sd);
+                    
+                    const sl = document.createElement('input');
+                    sl.type = 'number';
+                    sl.value = sp[1] || 0;
+                    sl.dataset.key = key;
+                    sl.dataset.skillPart = 'level';
+                    input.appendChild(sl);
+                    
+                    const sb = document.createElement('input');
+                    sb.type = 'checkbox';
+                    sb.checked = sp[2] === 'True';
+                    sb.dataset.key = key;
+                    sb.dataset.skillPart = 'bool';
+                    input.appendChild(sb);
+                    break;
+                    
+                case 'dropdown-array':
+                    input = createDropdownArrayField(key, def.options || [], val);
+                    break;
+                    
+                case 'catid-array':
+                    input = createCatIdArrayField(key, val);
+                    break;
+                    
+                default:
+                    input = document.createElement('span');
+                    input.className = 'display-only';
+                    input.textContent = '(unknown field type)';
+            }
+            
+            formGrid.appendChild(input);
+        }
+        
+        // Render an unknown field as read-only
+        function renderUnknownField(key, value) {
+            const lbl = document.createElement('label');
+            lbl.textContent = key;
+            formGrid.appendChild(lbl);
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = typeof value === 'object' ? JSON.stringify(value) : (value ?? '');
+            input.disabled = true;
+            input.style.opacity = '0.6';
+            input.title = 'Read-only: field not in definitions';
+            formGrid.appendChild(input);
+        }
+        
+        // Add a section header
+        function addSectionHeader(title) {
+            const header = document.createElement('div');
+            header.className = 'section-header';
+            header.textContent = title;
+            formGrid.appendChild(header);
+        }
+        
+        // Add a section note (like the sprite guide link)
+        function addSectionNote(html) {
+            const note = document.createElement('div');
+            note.className = 'section-note';
+            note.innerHTML = html;
+            formGrid.appendChild(note);
+        }
+        
         function renderForm(cat) {
             formGrid.innerHTML = '';
             
-            for (const [key, def] of Object.entries(FIELD_DEFS)) {
-                const val = getValue(cat, key);
-                
-                const lbl = document.createElement('label');
-                lbl.textContent = key;
-                formGrid.appendChild(lbl);
-                
-                let input;
-                
-                switch (def.inputType) {
-                    case 'display':
-                        input = document.createElement('span');
-                        input.className = 'display-only';
-                        input.textContent = val ?? '';
-                        break;
-                        
-                    case 'text':
-                        input = document.createElement('input');
-                        input.type = 'text';
-                        input.value = val ?? '';
-                        if (def.nullable) input.placeholder = '(none)';
-                        input.dataset.key = key;
-                        break;
-                        
-                    case 'number':
-                        input = document.createElement('input');
-                        input.type = 'number';
-                        input.value = val ?? 0;
-                        input.dataset.key = key;
-                        break;
-                        
-                    case 'checkbox':
-                        input = document.createElement('input');
-                        input.type = 'checkbox';
-                        input.checked = !!val;
-                        input.dataset.key = key;
-                        break;
-                        
-                    case 'dropdown':
-                        input = document.createElement('select');
-                        input.dataset.key = key;
-                        if (def.nullable) {
-                            const noneOpt = document.createElement('option');
-                            noneOpt.value = '<None>';
-                            noneOpt.textContent = '<None>';
-                            input.appendChild(noneOpt);
-                        }
-                        if (def.options) {
-                            for (const optVal of def.options) {
-                                const opt = document.createElement('option');
-                                opt.value = optVal;
-                                opt.textContent = optVal;
-                                if (optVal === val) opt.selected = true;
-                                input.appendChild(opt);
-                            }
-                        }
-                        if (val == null && def.nullable) {
-                            input.value = '<None>';
-                        }
-                        break;
-                        
-                    case 'catid':
-                        input = createSingleCatIdDropdown(key, val, def.nullable);
-                        break;
-                        
-                    case 'facets':
-                        input = document.createElement('div');
-                        input.className = 'compound';
-                        const parts = (val || '0,0,0,0').split(',');
-                        for (let i = 0; i < 4; i++) {
-                            const fi = document.createElement('input');
-                            fi.type = 'number';
-                            fi.value = parts[i] || 0;
-                            fi.dataset.key = key;
-                            fi.dataset.facetIndex = i;
-                            input.appendChild(fi);
-                        }
-                        break;
-                        
-                    case 'skill':
-                        input = document.createElement('div');
-                        input.className = 'compound';
-                        let sp = ['', '0', 'False'];
-                        if (val) sp = val.split(',');
-                        
-                        const sd = document.createElement('select');
-                        sd.dataset.key = key;
-                        sd.dataset.skillPart = 'name';
-                        if (def.nullable) {
-                            const noneOpt = document.createElement('option');
-                            noneOpt.value = '<None>';
-                            noneOpt.textContent = '<None>';
-                            sd.appendChild(noneOpt);
-                        }
-                        if (def.options) {
-                            for (const optVal of def.options) {
-                                const opt = document.createElement('option');
-                                opt.value = optVal;
-                                opt.textContent = optVal;
-                                if (optVal === sp[0]) opt.selected = true;
-                                sd.appendChild(opt);
-                            }
-                        }
-                        if (!val && def.nullable) sd.value = '<None>';
-                        input.appendChild(sd);
-                        
-                        const sl = document.createElement('input');
-                        sl.type = 'number';
-                        sl.value = sp[1] || 0;
-                        sl.dataset.key = key;
-                        sl.dataset.skillPart = 'level';
-                        input.appendChild(sl);
-                        
-                        const sb = document.createElement('input');
-                        sb.type = 'checkbox';
-                        sb.checked = sp[2] === 'True';
-                        sb.dataset.key = key;
-                        sb.dataset.skillPart = 'bool';
-                        input.appendChild(sb);
-                        break;
-                        
-                    case 'dropdown-array':
-                        input = createDropdownArrayField(key, def.options || [], val);
-                        break;
-                        
-                    case 'catid-array':
-                        input = createCatIdArrayField(key, val);
-                        break;
-                        
-                    default:
-                        input = document.createElement('span');
-                        input.className = 'display-only';
-                        input.textContent = '(unknown field type)';
+            // Track which keys we've rendered
+            const renderedKeys = new Set();
+            
+            // Helper to render a list of fields
+            function renderFieldList(keys) {
+                for (const key of keys) {
+                    if (SKIP_FIELDS.includes(key)) continue;
+                    const def = FIELD_DEFS[key];
+                    if (def) {
+                        renderField(cat, key, def);
+                        renderedKeys.add(key);
+                    }
                 }
-                
-                formGrid.appendChild(input);
+            }
+            
+            // Section 1: Basic info (no header)
+            renderFieldList(SECTION_BASIC);
+            
+            // Section 2: Appearance
+            addSectionHeader('Appearance');
+            addSectionNote('<a href="https://docs.google.com/spreadsheets/d/18T-VPGo4GJP35ECYnkzqKZThd6t8j7TwN97QspXtXY0/edit?gid=0#gid=0" target="_blank">Visual Sprite Guide</a> - resource with images for every variation');
+            renderFieldList(SECTION_APPEARANCE);
+            
+            // Section 3: Relationships
+            addSectionHeader('Relationships');
+            renderFieldList(SECTION_RELATIONSHIPS);
+            
+            // Section 4: Misc - everything else from FIELD_DEFS
+            addSectionHeader('Misc');
+            for (const [key, def] of Object.entries(FIELD_DEFS)) {
+                if (renderedKeys.has(key)) continue;
+                if (SKIP_FIELDS.includes(key)) continue;
+                renderField(cat, key, def);
+                renderedKeys.add(key);
+            }
+            
+            // Also render any fields from the cat object that aren't in FIELD_DEFS
+            for (const key of Object.keys(cat)) {
+                if (renderedKeys.has(key)) continue;
+                if (SKIP_FIELDS.includes(key)) continue;
+                // Skip known complex objects we handle elsewhere
+                if (key === 'pronouns' || key === 'status' || key === 'skill_dict') continue;
+                renderUnknownField(key, cat[key]);
             }
         }
     </script>

@@ -258,6 +258,9 @@
         // Fields to skip entirely (complex objects handled elsewhere)
         const SKIP_FIELDS = ['pronouns', 'status', 'skill_dict.hidden'];
         
+        // Fields that should only render if they exist on the cat
+        const CONDITIONAL_FIELDS = ['facets'];
+        
         // Custom display labels for certain fields
         const DISPLAY_LABELS = {
             'specsuffix_hidden': 'Hide suffix?',
@@ -365,6 +368,12 @@
             }
         }
         
+        // Check if a field should be rendered for this cat
+        function shouldRenderField(cat, key) {
+            if (!CONDITIONAL_FIELDS.includes(key)) return true;
+            return cat.hasOwnProperty(key);
+        }
+        
         // Collect form data and apply to the cat object at given index
         function applyFormDataToCat(catIndex) {
             const cat = catsData[catIndex];
@@ -373,6 +382,8 @@
             
             for (const [key, def] of Object.entries(FIELD_DEFS)) {
                 if (def.inputType === 'display') continue;
+                // Skip conditional fields that weren't rendered
+                if (!shouldRenderField(cat, key)) continue;
                 
                 let value;
                 
@@ -938,6 +949,8 @@
             function renderFieldList(keys) {
                 for (const key of keys) {
                     if (SKIP_FIELDS.includes(key)) continue;
+                    // Skip conditional fields that don't exist on this cat
+                    if (!shouldRenderField(cat, key)) continue;
                     const def = FIELD_DEFS[key];
                     if (def) {
                         renderField(cat, key, def);
@@ -963,6 +976,8 @@
             for (const [key, def] of Object.entries(FIELD_DEFS)) {
                 if (renderedKeys.has(key)) continue;
                 if (SKIP_FIELDS.includes(key)) continue;
+                // Skip conditional fields that don't exist on this cat
+                if (!shouldRenderField(cat, key)) continue;
                 renderField(cat, key, def);
                 renderedKeys.add(key);
             }

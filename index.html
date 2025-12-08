@@ -457,12 +457,7 @@
                         
                     case 'catid-array':
                     case 'dropdown-array':
-                        input = document.createElement('input');
-                        input.type = 'text';
-                        input.value = Array.isArray(val) ? val.join(', ') : '';
-                        input.placeholder = '(array - placeholder)';
-                        input.dataset.key = key;
-                        input.dataset.arrayPlaceholder = 'true';
+                        input = createDropdownArrayField(key, def.options, val);
                         break;
                         
                     default:

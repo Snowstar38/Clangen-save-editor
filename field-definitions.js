@@ -57,7 +57,7 @@ const FIELD_DEFS = {
     'tortie_pattern':       { dataType: 'str',      inputType: 'dropdown',  options: peltPatterns, nullable: true },
     'skin':                 { dataType: 'str',      inputType: 'dropdown',  options: skins },
     'tint':                 { dataType: 'str',      inputType: 'dropdown',  options: tints },
-    'skill_dict.primary':   { dataType: 'compound', inputType: 'skill',     options: skills },
+    'skill_dict.primary':   { dataType: 'compound', inputType: 'skill',     options: skills, nullable: true },
     'skill_dict.secondary': { dataType: 'compound', inputType: 'skill',     options: skills, nullable: true },
     // skill_dict.hidden: SKIP
     'scars':                { dataType: 'list',     inputType: 'dropdown-array', options: scarTypes },
